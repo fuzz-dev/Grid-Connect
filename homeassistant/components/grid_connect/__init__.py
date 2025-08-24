@@ -40,16 +40,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: GridConnectConfigEntry) 
     """Set up Grid Connect from a config entry."""
     try:
         if entry.data.get("use_bluetooth"):
+            # Handle Bluetooth device setup
             devices = await discover_bluetooth_devices()
             for device in devices:
                 _LOGGER.info("Processing device: %s, %s", device.name, device.address)
             # Add further processing logic as needed
             return True
 
-        # Forward the configuration entry to the defined platforms
-        await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
-        entry.runtime_data = {"key": "value"}  # Replace with actual runtime data
-        return True
+        # Non-Bluetooth setup path
+        try:
+            # Forward the configuration entry to the defined platforms
+            await hass.config_entries.async_forward_entry_setups(entry, _PLATFORMS)
+        except (ValueError, ImportError) as err:
+            _LOGGER.error("Failed to set up platforms: %s", err)
+            return False
+        else:
+            entry.runtime_data = {"key": "value"}  # Replace with actual runtime data
+            return True
 
     except AuthenticationError as err:
         raise ConfigEntryAuthFailed("Authentication failed") from err
